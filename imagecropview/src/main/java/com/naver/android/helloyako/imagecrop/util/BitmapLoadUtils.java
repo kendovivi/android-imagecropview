@@ -65,7 +65,8 @@ public class BitmapLoadUtils {
 
         }
 
-        ExifInterface exif = getExif(path);
+//        ExifInterface exif = getExif(path);
+        ExifInterface exif = null;
         if (exif == null) {
             return decodeSampledBitmap;
         }
