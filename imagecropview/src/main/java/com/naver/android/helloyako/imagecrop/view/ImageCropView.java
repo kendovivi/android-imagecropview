@@ -29,7 +29,9 @@ import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Handler;
+import android.os.ParcelFileDescriptor;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
@@ -46,6 +48,9 @@ import com.naver.android.helloyako.imagecrop.util.BitmapLoadUtils;
 import com.naver.android.helloyako.imagecrop.view.graphics.FastBitmapDrawable;
 
 import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import it.sephiroth.android.library.easing.Cubic;
 import it.sephiroth.android.library.easing.Easing;
@@ -114,6 +119,7 @@ public class ImageCropView extends ImageView {
     private float gridTopBottomMargin;
 
     private String imageFilePath;
+    private Uri imageFileUri;
 
     protected ScaleGestureDetector mScaleDetector;
     protected GestureDetector mGestureDetector;
@@ -438,6 +444,21 @@ public class ImageCropView extends ImageView {
         int reqSize = 1000;
         Bitmap bitmap = BitmapLoadUtils.decode(imageFilePath, reqSize, reqSize, true);
         setImageBitmap(bitmap);
+    }
+
+    public void setImageFileUri(Uri imageFileUri) {
+        ParcelFileDescriptor parcelFileDescriptor = null;
+        try {
+            parcelFileDescriptor = getContext().getContentResolver().openFileDescriptor(imageFileUri, "r");
+
+        } catch (FileNotFoundException exception) {
+            exception.printStackTrace();
+        }
+        this.imageFileUri = imageFileUri;
+        FileDescriptor fileDescriptor = parcelFileDescriptor.getFileDescriptor();
+        Bitmap bitmap = BitmapLoadUtils.decodeFileDescriptor(fileDescriptor, 1000, 1000, true);
+        setImageBitmap(bitmap);
+
     }
 
     @Override

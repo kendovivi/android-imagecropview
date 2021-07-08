@@ -21,8 +21,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
+import android.net.Uri;
+import android.os.Build;
 import android.util.Log;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
 
 /**
@@ -66,6 +69,47 @@ public class BitmapLoadUtils {
         }
 
         ExifInterface exif = getExif(path);
+        if (exif == null) {
+            return decodeSampledBitmap;
+        }
+        int exifOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+        int rotationInDegrees = exifToDegrees(exifOrientation);
+        return rotate(decodeSampledBitmap, rotationInDegrees);
+
+    }
+
+    public static Bitmap decodeFileDescriptor(FileDescriptor fileDescriptor, int reqWidth, int reqHeight, boolean useImageView) {
+        if (fileDescriptor == null) {
+            return null;
+        }
+
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+//        BitmapFactory.decodeFile(path, options);
+
+        BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
+
+        // Calculate inSampleSize
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight, useImageView);
+
+        // Decode bitmap with inSampleSize set
+        options.inJustDecodeBounds = false;
+
+        Bitmap decodeSampledBitmap = null;
+        boolean isSuccess = false;
+        while (!isSuccess) {
+            try {
+                isSuccess = true;
+                decodeSampledBitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
+            } catch (OutOfMemoryError ex) {
+                Log.w(TAG, "BitmapLoadUtils decode OutOfMemoryError");
+                options.inSampleSize = options.inSampleSize * 2;
+                isSuccess = false;
+            }
+
+        }
+
+        ExifInterface exif = getExifByFileDescriptor(fileDescriptor);
         if (exif == null) {
             return decodeSampledBitmap;
         }
@@ -129,6 +173,18 @@ public class BitmapLoadUtils {
     private static ExifInterface getExif(String path) {
         try {
             return new ExifInterface(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+
+    private static ExifInterface getExifByFileDescriptor(FileDescriptor fileDescriptor) {
+        try {
+
+            return new ExifInterface(fileDescriptor);
         } catch (IOException e) {
             e.printStackTrace();
         }
